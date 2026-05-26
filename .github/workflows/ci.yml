@@ -3,15 +3,62 @@ name: CI
 on:
   push:
     branches: ["main"]
-  pull_request_target:
+  pull_request:
     paths:
       - 'src/**'
       - 'test/**'
       - '*.json'
+      - '.github/workflows/**'
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
+  lint:
+    name: Lint & Type Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Use Node.js LTS
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+          cache: npm
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Check formatting
+        run: npx prettier --check .
+
+      - name: Build (type-check)
+        run: npm run prepare
+
+  audit:
+    name: Security Audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Use Node.js LTS
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+          cache: npm
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run npm audit
+        run: npm audit --audit-level=high
+
   build:
+    name: Test (${{ matrix.node-version }}, ${{ matrix.platform.os }}, ${{ matrix.platform.shell }})
+    needs: lint
     strategy:
       matrix:
         node-version: [20.x, 22.x, 24.x]
@@ -35,10 +82,11 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Use Nodejs ${{ matrix.node-version }}
+      - name: Use Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
+          cache: npm
 
       - name: Install dependencies
         run: npm install
@@ -50,3 +98,15 @@ jobs:
       - name: Run Tests Unix (complete coverage)
         if: matrix.platform.os != 'windows-latest'
         run: npm test -- -c -t0
+
+      - name: Upload coverage report
+        if: >
+          matrix.platform.os == 'ubuntu-latest' &&
+          matrix.node-version == '22.x' &&
+          matrix.platform.shell == 'bash'
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage/
+          if-no-files-found: ignore
+          retention-days: 7

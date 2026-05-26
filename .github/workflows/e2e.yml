@@ -1,0 +1,60 @@
+name: E2E Tests (skintwin-ai integration)
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    paths:
+      - 'src/**'
+      - 'test/**'
+      - '*.json'
+      - '.github/workflows/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  e2e:
+    name: E2E (${{ matrix.node-version }}, ${{ matrix.os }})
+    strategy:
+      matrix:
+        node-version: [20.x, 22.x, 24.x]
+        os: [ubuntu-latest, macos-latest, windows-latest]
+      fail-fast: false
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build library
+        run: npm run prepare
+
+      - name: Build test fixtures
+        working-directory: test/fixtures
+        run: npx tsc
+
+      - name: Run E2E integration tests
+        run: npx tap test/skintwin-integration.ts --timeout=60 --allow-incomplete-coverage
+
+      - name: Upload E2E test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-results-node${{ matrix.node-version }}-${{ matrix.os }}
+          path: |
+            .tap/
+            coverage/
+          if-no-files-found: ignore
+          retention-days: 7
