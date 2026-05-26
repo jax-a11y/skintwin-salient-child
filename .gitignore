@@ -1,0 +1,6 @@
+/node_modules
+/.tap
+.DS_Store
+/dist
+/node_modules
+/docs
