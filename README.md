@@ -1,5 +1,12 @@
 # foreground-child
 
+> **skintwin-ai adaptation** — This fork is optimised for use in
+> [skintwin-ai](https://github.com/skintwin-ai) AI pipeline processes.
+> It ships an expanded CI matrix (Node 20/22/24 × Linux/macOS/Windows),
+> a dedicated E2E test workflow, and an exhaustive integration test suite
+> that validates worker lifecycle, graceful shutdown, pipeline nesting,
+> high-throughput stdout passthrough, and async cleanup handlers.
+
 Run a child as if it's the foreground process. Give it stdio. Exit
 when it exits.
 
